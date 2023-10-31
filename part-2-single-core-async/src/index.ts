@@ -5,9 +5,9 @@ const port = 3000
 
 let requestNumber = 0;
 
-app.get('/', (req, res) => {
+app.get('/', async(req, res) => {
   console.log(`starting request ${requestNumber}`)
-  expensiveOperation();
+  await expensiveOperation();
   res.send('Hello World!')
 })
 
