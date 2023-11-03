@@ -1,0 +1,40 @@
+name: Deploy backend-api-app
+
+on: 
+  push:
+    branches:
+        - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest 
+    steps:
+        - uses: actions/checkout@v2
+
+        - name: docker login
+          env:
+            DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+            DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          run: |
+            docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+         
+        - name: Build docker image
+          run: docker build . --tag swaraj17/part-4-multi-core-nodejs:${{ github.sha }}
+
+        - name: Push docker image
+          run: docker push swaraj17/part-4-multi-core-nodejs:${{ github.sha }}
+
+        - name: Create a zip
+          run: |
+             mkdir deploy && cp docker-compose.yml ./deploy && sed 's/{{tag}}/${{ github.sha}}/g' ./deploy/docker-compose.yml > ./deploy/temp.yml && mv ./deploy/temp.yml ./deploy/docker-compose.yml && cd deploy && zip deploy.zip * && cd .. && mv ./deploy/deploy.zip .
+        
+        - name: Deploy to EB
+          uses: einaregilsson/beanstalk-deploy@v20  
+          with: 
+            aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            application_name: "part-4-multi-core-nodejs"
+            environment_name: "Part-4-multi-core-nodejs-env"
+            version_label: ${{ github.sha }}
+            region: "us-east-1"
+            deployment_package: "deploy.zip"
